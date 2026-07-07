@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Assistenti — Il canto delle sirene</title>
+<style>
+  :root {
+    --carta: #F7F6F2;
+    --inchiostro: #201F1D;
+    --inchiostro-tenue: #6E6A62;
+    --filo: #DDD9D0;
+    --oltremare: #2B4C9B;
+    --oltremare-scuro: #223C7A;
+    --errore: #8C2F22;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+  body {
+    background: var(--carta);
+    color: var(--inchiostro);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    font-size: 17px;
+    line-height: 1.55;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- Testata ---------- */
+  header {
+    border-bottom: 1px solid var(--filo);
+    padding: 14px 20px 12px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .titolo { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.01em; }
+  .titolo em { color: var(--oltremare); font-style: normal; }
+  .etichetta {
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--inchiostro-tenue);
+  }
+  button.nuova {
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid var(--filo);
+    border-radius: 3px;
+    color: var(--inchiostro-tenue);
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  button.nuova:hover { border-color: var(--inchiostro-tenue); color: var(--inchiostro); }
+
+  /* ---------- Dialogo ---------- */
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 26px 20px 12px;
+  }
+  .foglio { max-width: 720px; margin: 0 auto; }
+
+  .battuta { margin-bottom: 26px; animation: comparsa 0.25s ease-out; }
+  @keyframes comparsa { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .battuta { animation: none; } }
+
+  .parlante {
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .battuta.tu .parlante { color: var(--inchiostro-tenue); }
+  .battuta.sparring .parlante { color: var(--oltremare); }
+
+  .testo { padding-left: 14px; border-left: 2px solid transparent; }
+  .battuta.tu .testo { border-left-color: var(--filo); }
+  .battuta.sparring .testo { border-left-color: var(--oltremare); }
+  .battuta.errore .testo { border-left-color: var(--errore); color: var(--errore); }
+
+  .testo p { margin-bottom: 0.7em; }
+  .testo p:last-child { margin-bottom: 0; }
+  .testo ul, .testo ol { margin: 0.4em 0 0.7em 1.3em; }
+  .testo li { margin-bottom: 0.25em; }
+
+  .attesa { color: var(--inchiostro-tenue); font-style: italic; }
+
+  /* ---------- Scrittoio ---------- */
+  footer {
+    border-top: 1px solid var(--filo);
+    padding: 12px 20px 10px;
+    background: var(--carta);
+  }
+  .scrittoio { max-width: 720px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; }
+  textarea {
+    flex: 1;
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--inchiostro);
+    background: #FFFFFF;
+    border: 1px solid var(--filo);
+    border-radius: 4px;
+    padding: 10px 12px;
+    resize: none;
+    min-height: 46px;
+    max-height: 160px;
+  }
+  textarea:focus { outline: 2px solid var(--oltremare); outline-offset: 1px; border-color: transparent; }
+  button.invia {
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: var(--oltremare);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 12px 18px;
+    cursor: pointer;
+  }
+  button.invia:hover { background: var(--oltremare-scuro); }
+  button.invia:disabled { opacity: 0.45; cursor: default; }
+  .avvertenza {
+    max-width: 720px;
+    margin: 8px auto 0;
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+    font-size: 0.7rem;
+    color: var(--inchiostro-tenue);
+  }
+
+  /* ---------- Cancello del PIN ---------- */
+  #cancello {
+    position: fixed; inset: 0;
+    background: var(--carta);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10;
+  }
+  .cancello-scheda { text-align: center; padding: 24px; max-width: 340px; }
+  .cancello-scheda h1 { font-size: 1.15rem; font-weight: 600; margin-bottom: 4px; }
+  .cancello-scheda p { color: var(--inchiostro-tenue); font-size: 0.9rem; margin-bottom: 18px; }
+  .cancello-scheda input {
+    font-family: inherit; font-size: 1.1rem; text-align: center;
+    letter-spacing: 0.3em;
+    width: 160px; padding: 10px;
+    border: 1px solid var(--filo); border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .cancello-scheda input:focus { outline: 2px solid var(--oltremare); border-color: transparent; }
+  .cancello-scheda .invia { display: block; margin: 0 auto; }
+  .cancello-errore { color: var(--errore); font-size: 0.85rem; min-height: 1.2em; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div id="cancello">
+  <div class="cancello-scheda">
+    <h1>Assistenti allo studio</h1>
+    <p>Inserisci il PIN fornito dal docente.</p>
+    <input id="pin-input" type="password" inputmode="numeric" autocomplete="off" aria-label="PIN">
+    <button class="invia" id="pin-invia">Entra</button>
+    <div class="cancello-errore" id="pin-errore"></div>
+  </div>
+</div>
+
+<header>
+  <div>
+    <div class="etichetta" id="etichetta-assistente">Assistente</div>
+    <div class="titolo" id="titolo-assistente">…</div>
+  </div>
+  <button class="nuova" id="nuova-sessione" title="Cancella la conversazione e ricomincia">Nuova sessione</button>
+</header>
+
+<main id="dialogo"><div class="foglio" id="foglio"></div></main>
+
+<footer>
+  <div class="scrittoio">
+    <textarea id="campo" rows="1" placeholder="Scrivi qui…" aria-label="Messaggio"></textarea>
+    <button class="invia" id="invia">Invia</button>
+  </div>
+  <div class="avvertenza">Non inserire dati personali. L'assistente può sbagliare: per i contenuti fai fede al manuale e al docente.</div>
+</footer>
+
+<script>
+/* =========================================================================
+   CONFIGURAZIONE — le uniche righe da modificare
+   ========================================================================= */
+const WORKER_URL = "https://assistenti-vico.TUO-SOTTODOMINIO.workers.dev"; // ← dopo il primo deploy
+const ASSISTENTI = {
+  sparring: { titolo: "Sparring argomentativo", benvenuto:
+    "Sono il tuo sparring partner argomentativo. Dimmi da dove vuoi partire: " +
+    "**valida la mia tesi**, **avvocato del diavolo**, **steelman**, **ricostruzione guidata** o **caccia alle fallacie**." },
+};
+/* ========================================================================= */
+
+const parametri = new URLSearchParams(location.search);
+const idAssistente = ASSISTENTI[parametri.get("assistente")] ? parametri.get("assistente") : "sparring";
+const assistente = ASSISTENTI[idAssistente];
+
+const foglio = document.getElementById("foglio");
+const dialogo = document.getElementById("dialogo");
+const campo = document.getElementById("campo");
+const bottoneInvia = document.getElementById("invia");
+
+let storia = [];      // [{role, content}]
+let inAttesa = false;
+
+document.getElementById("titolo-assistente").textContent = assistente.titolo;
+document.title = assistente.titolo + " — Il canto delle sirene";
+
+/* ---------- PIN ---------- */
+const cancello = document.getElementById("cancello");
+const pinInput = document.getElementById("pin-input");
+function pinSalvato() { return sessionStorage.getItem("pin") || ""; }
+if (pinSalvato()) apriDialogo();
+document.getElementById("pin-invia").addEventListener("click", provaPin);
+pinInput.addEventListener("keydown", (e) => { if (e.key === "Enter") provaPin(); });
+function provaPin() {
+  const valore = pinInput.value.trim();
+  if (!valore) return;
+  sessionStorage.setItem("pin", valore);
+  apriDialogo(); // la verifica vera avviene alla prima richiesta
+}
+function apriDialogo() {
+  cancello.style.display = "none";
+  if (storia.length === 0 && foglio.children.length === 0) {
+    aggiungiBattuta("sparring", assistente.benvenuto);
+  }
+  campo.focus();
+}
+
+/* ---------- Resa del testo (sicura: prima si neutralizza l'HTML) ---------- */
+function rendi(testo) {
+  let t = testo
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  t = t.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  // elenchi puntati e numerati minimi
+  t = t.replace(/(?:^|\n)((?:[-•] .*(?:\n|$))+)/g, (m, blocco) =>
+    "\n<ul>" + blocco.trim().split("\n").map(r => "<li>" + r.replace(/^[-•] /, "") + "</li>").join("") + "</ul>");
+  t = t.replace(/(?:^|\n)((?:\d+[.)] .*(?:\n|$))+)/g, (m, blocco) =>
+    "\n<ol>" + blocco.trim().split("\n").map(r => "<li>" + r.replace(/^\d+[.)] /, "") + "</li>").join("") + "</ol>");
+  // paragrafi
+  return t.split(/\n{2,}/).map(p => {
+    p = p.trim();
+    if (!p) return "";
+    if (p.startsWith("<ul>") || p.startsWith("<ol>")) return p;
+    return "<p>" + p.replaceAll("\n", "<br>") + "</p>";
+  }).join("");
+}
+
+function aggiungiBattuta(chi, testo, classeExtra) {
+  const div = document.createElement("div");
+  div.className = "battuta " + chi + (classeExtra ? " " + classeExtra : "");
+  const parlante = chi === "tu" ? "Tu" : "Sparring";
+  div.innerHTML = '<div class="parlante">' + parlante + '</div><div class="testo">' + rendi(testo) + "</div>";
+  foglio.appendChild(div);
+  dialogo.scrollTop = dialogo.scrollHeight;
+  return div;
+}
+
+/* ---------- Invio ---------- */
+async function invia() {
+  const testo = campo.value.trim();
+  if (!testo || inAttesa) return;
+  campo.value = "";
+  ridimensiona();
+
+  aggiungiBattuta("tu", testo);
+  storia.push({ role: "user", content: testo });
+
+  inAttesa = true;
+  bottoneInvia.disabled = true;
+  const attesa = aggiungiBattuta("sparring", "sta pensando…", "attesa-box");
+  attesa.querySelector(".testo").classList.add("attesa");
+
+  try {
+    const r = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assistente: idAssistente, pin: pinSalvato(), messages: storia }),
+    });
+    const dati = await r.json().catch(() => ({}));
+    attesa.remove();
+
+    if (r.status === 401) {
+      sessionStorage.removeItem("pin");
+      storia.pop();
+      document.getElementById("pin-errore").textContent = "PIN non valido: riprova.";
+      pinInput.value = "";
+      cancello.style.display = "flex";
+      pinInput.focus();
+      return;
+    }
+    if (!r.ok || !dati.risposta) {
+      storia.pop();
+      aggiungiBattuta("sparring", dati.errore || "Qualcosa non ha funzionato: riprova.", "errore");
+      return;
+    }
+    storia.push({ role: "assistant", content: dati.risposta });
+    aggiungiBattuta("sparring", dati.risposta);
+  } catch {
+    attesa.remove();
+    storia.pop();
+    aggiungiBattuta("sparring", "Connessione non riuscita: controlla la rete e riprova.", "errore");
+  } finally {
+    inAttesa = false;
+    bottoneInvia.disabled = false;
+    campo.focus();
+  }
+}
+
+bottoneInvia.addEventListener("click", invia);
+campo.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); invia(); }
+});
+function ridimensiona() {
+  campo.style.height = "auto";
+  campo.style.height = Math.min(campo.scrollHeight, 160) + "px";
+}
+campo.addEventListener("input", ridimensiona);
+
+document.getElementById("nuova-sessione").addEventListener("click", () => {
+  storia = [];
+  foglio.innerHTML = "";
+  aggiungiBattuta("sparring", assistente.benvenuto);
+  campo.focus();
+});
+</script>
+</body>
+</html>
