@@ -39,7 +39,6 @@
     flex-wrap: wrap;
   }
   .titolo { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.01em; }
-  .titolo em { color: var(--oltremare); font-style: normal; }
   .etichetta {
     font-family: ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
     font-size: 0.68rem;
@@ -81,11 +80,11 @@
     margin-bottom: 5px;
   }
   .battuta.tu .parlante { color: var(--inchiostro-tenue); }
-  .battuta.sparring .parlante { color: var(--oltremare); }
+  .battuta.assistente .parlante { color: var(--oltremare); }
 
   .testo { padding-left: 14px; border-left: 2px solid transparent; }
   .battuta.tu .testo { border-left-color: var(--filo); }
-  .battuta.sparring .testo { border-left-color: var(--oltremare); }
+  .battuta.assistente .testo { border-left-color: var(--oltremare); }
   .battuta.errore .testo { border-left-color: var(--errore); color: var(--errore); }
 
   .testo p { margin-bottom: 0.7em; }
@@ -138,37 +137,67 @@
     color: var(--inchiostro-tenue);
   }
 
-  /* ---------- Cancello del PIN ---------- */
-  #cancello {
+  /* ---------- Schermate a tutta pagina (PIN e scelta personaggio) ---------- */
+  .velo {
     position: fixed; inset: 0;
     background: var(--carta);
     display: flex; align-items: center; justify-content: center;
     z-index: 10;
+    overflow-y: auto;
   }
-  .cancello-scheda { text-align: center; padding: 24px; max-width: 340px; }
-  .cancello-scheda h1 { font-size: 1.15rem; font-weight: 600; margin-bottom: 4px; }
-  .cancello-scheda p { color: var(--inchiostro-tenue); font-size: 0.9rem; margin-bottom: 18px; }
-  .cancello-scheda input {
+  .scheda { text-align: center; padding: 24px; max-width: 420px; width: 100%; }
+  .scheda h1 { font-size: 1.15rem; font-weight: 600; margin-bottom: 4px; }
+  .scheda p { color: var(--inchiostro-tenue); font-size: 0.9rem; margin-bottom: 18px; }
+  .scheda input {
     font-family: inherit; font-size: 1.1rem; text-align: center;
     letter-spacing: 0.3em;
     width: 160px; padding: 10px;
     border: 1px solid var(--filo); border-radius: 4px;
     margin-bottom: 12px;
   }
-  .cancello-scheda input:focus { outline: 2px solid var(--oltremare); border-color: transparent; }
-  .cancello-scheda .invia { display: block; margin: 0 auto; }
-  .cancello-errore { color: var(--errore); font-size: 0.85rem; min-height: 1.2em; margin-top: 10px; }
+  .scheda input:focus { outline: 2px solid var(--oltremare); border-color: transparent; }
+  .scheda .invia { display: inline-block; }
+  .scheda-errore { color: var(--errore); font-size: 0.85rem; min-height: 1.2em; margin-top: 10px; }
+
+  .personaggio-card {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+    background: #FFFFFF;
+    border: 1px solid var(--filo);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  .personaggio-card:hover { border-color: var(--oltremare); }
+  .personaggio-card .nome { font-size: 1.05rem; font-weight: 600; }
+  .personaggio-card .epoca {
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+    font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--oltremare); margin: 2px 0 4px;
+  }
+  .personaggio-card .descrizione { font-size: 0.9rem; color: var(--inchiostro-tenue); }
 </style>
 </head>
 <body>
 
-<div id="cancello">
-  <div class="cancello-scheda">
+<div id="cancello" class="velo">
+  <div class="scheda">
     <h1>Assistenti allo studio</h1>
     <p>Inserisci il PIN fornito dal docente.</p>
     <input id="pin-input" type="password" inputmode="numeric" autocomplete="off" aria-label="PIN">
     <button class="invia" id="pin-invia">Entra</button>
-    <div class="cancello-errore" id="pin-errore"></div>
+    <div class="scheda-errore" id="pin-errore"></div>
+  </div>
+</div>
+
+<div id="selettore" class="velo" style="display:none;">
+  <div class="scheda">
+    <h1 id="selettore-titolo">Chi vuoi intervistare?</h1>
+    <p id="selettore-sottotitolo">Scegli il personaggio.</p>
+    <div id="selettore-lista"></div>
   </div>
 </div>
 
@@ -192,13 +221,33 @@
 
 <script>
 /* =========================================================================
-   CONFIGURAZIONE — le uniche righe da modificare
+   CONFIGURAZIONE — le uniche parti da modificare
    ========================================================================= */
-const WORKER_URL = "https://assistenti-vico.fbaldassarre.workers.dev"; // ← dopo il primo deploy
+const WORKER_URL = "https://assistenti-vico.SOSTITUISCIMI.workers.dev"; // ★ UNICA RIGA TECNICA DA MODIFICARE: l'indirizzo stampato da wrangler deploy
+
 const ASSISTENTI = {
-  sparring: { titolo: "Sparring argomentativo", benvenuto:
-    "Sono il tuo sparring partner argomentativo. Dimmi da dove vuoi partire: " +
-    "**valida la mia tesi**, **avvocato del diavolo**, **steelman**, **ricostruzione guidata** o **caccia alle fallacie**." },
+  sparring: {
+    titolo: "Sparring argomentativo",
+    parlante: "Sparring",
+    benvenuto:
+      "Sono il tuo sparring partner argomentativo. Dimmi da dove vuoi partire: " +
+      "**valida la mia tesi**, **avvocato del diavolo**, **steelman**, **ricostruzione guidata** o **caccia alle fallacie**.",
+  },
+  intervista_impossibile: {
+    titolo: "Intervista impossibile",
+    parlante: "Personaggio",
+    selettoreTitolo: "Chi vuoi intervistare?",
+    selettoreSottotitolo: "Il personaggio sa di essere morto e riceve nel presente. Sta a te fare le domande giuste.",
+    personaggi: {
+      kant: {
+        nome: "Immanuel Kant",
+        epoca: "Königsberg, 1724–1804",
+        descrizione: "Il filosofo del limite e della maggiore età dell'umanità. Puntuale, cortese, temibile con le domande mal poste.",
+        benvenuto: "*Lo studio è in ordine perfetto; sulla parete, un ritratto di Rousseau. Kant ti osserva con cortesia e un velo di disappunto: l'intervista non era in agenda.* Prego, si accomodi. Mi dicono che Lei viene dal presente e che ha domande per me. Cominci pure — e le formuli con cura.",
+      },
+      // prossimi personaggi: nuova voce qui (stessa etichetta usata nel Worker)
+    },
+  },
 };
 /* ========================================================================= */
 
@@ -210,9 +259,11 @@ const foglio = document.getElementById("foglio");
 const dialogo = document.getElementById("dialogo");
 const campo = document.getElementById("campo");
 const bottoneInvia = document.getElementById("invia");
+const selettore = document.getElementById("selettore");
 
-let storia = [];      // [{role, content}]
+let storia = [];            // [{role, content}]
 let inAttesa = false;
+let idPersonaggio = null;   // etichetta del personaggio scelto (se previsto)
 
 document.getElementById("titolo-assistente").textContent = assistente.titolo;
 document.title = assistente.titolo + " — Il canto delle sirene";
@@ -221,19 +272,58 @@ document.title = assistente.titolo + " — Il canto delle sirene";
 const cancello = document.getElementById("cancello");
 const pinInput = document.getElementById("pin-input");
 function pinSalvato() { return sessionStorage.getItem("pin") || ""; }
-if (pinSalvato()) apriDialogo();
+if (pinSalvato()) dopoIlPin();
 document.getElementById("pin-invia").addEventListener("click", provaPin);
-pinInput.addEventListener("keydown", (e) => { if (e.key === "Enter") provaPin(); });
+pinInput.addEventListener("keydown", function (e) { if (e.key === "Enter") provaPin(); });
 function provaPin() {
   const valore = pinInput.value.trim();
   if (!valore) return;
   sessionStorage.setItem("pin", valore);
-  apriDialogo(); // la verifica vera avviene alla prima richiesta
+  dopoIlPin(); // la verifica vera avviene alla prima richiesta
 }
-function apriDialogo() {
+
+/* ---------- Dopo il PIN: selettore del personaggio, se previsto ---------- */
+function dopoIlPin() {
   cancello.style.display = "none";
+  if (assistente.personaggi && !idPersonaggio) {
+    mostraSelettore();
+  } else {
+    apriDialogo();
+  }
+}
+
+function mostraSelettore() {
+  document.getElementById("selettore-titolo").textContent = assistente.selettoreTitolo || "Scegli";
+  document.getElementById("selettore-sottotitolo").textContent = assistente.selettoreSottotitolo || "";
+  const lista = document.getElementById("selettore-lista");
+  lista.innerHTML = "";
+  Object.keys(assistente.personaggi).forEach(function (id) {
+    const p = assistente.personaggi[id];
+    const card = document.createElement("button");
+    card.className = "personaggio-card";
+    card.innerHTML =
+      '<div class="nome">' + p.nome + '</div>' +
+      '<div class="epoca">' + (p.epoca || "") + '</div>' +
+      '<div class="descrizione">' + (p.descrizione || "") + '</div>';
+    card.addEventListener("click", function () { scegliPersonaggio(id); });
+    lista.appendChild(card);
+  });
+  selettore.style.display = "flex";
+}
+
+function scegliPersonaggio(id) {
+  idPersonaggio = id;
+  const p = assistente.personaggi[id];
+  selettore.style.display = "none";
+  document.getElementById("titolo-assistente").textContent = assistente.titolo + " — " + p.nome;
+  document.title = assistente.titolo + " — " + p.nome;
+  apriDialogo(p.benvenuto, p.nome);
+}
+
+/* ---------- Apertura del dialogo ---------- */
+function apriDialogo(benvenuto, nomeParlante) {
   if (storia.length === 0 && foglio.children.length === 0) {
-    aggiungiBattuta("sparring", assistente.benvenuto);
+    aggiungiBattuta("assistente", benvenuto || assistente.benvenuto, null, nomeParlante);
   }
   campo.focus();
 }
@@ -244,13 +334,13 @@ function rendi(testo) {
     .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
   t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   t = t.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
-  // elenchi puntati e numerati minimi
-  t = t.replace(/(?:^|\n)((?:[-•] .*(?:\n|$))+)/g, (m, blocco) =>
-    "\n<ul>" + blocco.trim().split("\n").map(r => "<li>" + r.replace(/^[-•] /, "") + "</li>").join("") + "</ul>");
-  t = t.replace(/(?:^|\n)((?:\d+[.)] .*(?:\n|$))+)/g, (m, blocco) =>
-    "\n<ol>" + blocco.trim().split("\n").map(r => "<li>" + r.replace(/^\d+[.)] /, "") + "</li>").join("") + "</ol>");
-  // paragrafi
-  return t.split(/\n{2,}/).map(p => {
+  t = t.replace(/(?:^|\n)((?:[-•] .*(?:\n|$))+)/g, function (m, blocco) {
+    return "\n<ul>" + blocco.trim().split("\n").map(function (r) { return "<li>" + r.replace(/^[-•] /, "") + "</li>"; }).join("") + "</ul>";
+  });
+  t = t.replace(/(?:^|\n)((?:\d+[.)] .*(?:\n|$))+)/g, function (m, blocco) {
+    return "\n<ol>" + blocco.trim().split("\n").map(function (r) { return "<li>" + r.replace(/^\d+[.)] /, "") + "</li>"; }).join("") + "</ol>";
+  });
+  return t.split(/\n{2,}/).map(function (p) {
     p = p.trim();
     if (!p) return "";
     if (p.startsWith("<ul>") || p.startsWith("<ol>")) return p;
@@ -258,10 +348,17 @@ function rendi(testo) {
   }).join("");
 }
 
-function aggiungiBattuta(chi, testo, classeExtra) {
+function nomeParlanteCorrente() {
+  if (idPersonaggio && assistente.personaggi) {
+    return assistente.personaggi[idPersonaggio].nome;
+  }
+  return assistente.parlante || "Assistente";
+}
+
+function aggiungiBattuta(chi, testo, classeExtra, nomeForzato) {
   const div = document.createElement("div");
   div.className = "battuta " + chi + (classeExtra ? " " + classeExtra : "");
-  const parlante = chi === "tu" ? "Tu" : "Sparring";
+  const parlante = chi === "tu" ? "Tu" : (nomeForzato || nomeParlanteCorrente());
   div.innerHTML = '<div class="parlante">' + parlante + '</div><div class="testo">' + rendi(testo) + "</div>";
   foglio.appendChild(div);
   dialogo.scrollTop = dialogo.scrollHeight;
@@ -272,6 +369,7 @@ function aggiungiBattuta(chi, testo, classeExtra) {
 async function invia() {
   const testo = campo.value.trim();
   if (!testo || inAttesa) return;
+  if (assistente.personaggi && !idPersonaggio) return; // prima si sceglie
   campo.value = "";
   ridimensiona();
 
@@ -280,16 +378,21 @@ async function invia() {
 
   inAttesa = true;
   bottoneInvia.disabled = true;
-  const attesa = aggiungiBattuta("sparring", "sta pensando…", "attesa-box");
+  const attesa = aggiungiBattuta("assistente", "sta pensando…");
   attesa.querySelector(".testo").classList.add("attesa");
 
   try {
     const r = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assistente: idAssistente, pin: pinSalvato(), messages: storia }),
+      body: JSON.stringify({
+        assistente: idAssistente,
+        personaggio: idPersonaggio,
+        pin: pinSalvato(),
+        messages: storia,
+      }),
     });
-    const dati = await r.json().catch(() => ({}));
+    const dati = await r.json().catch(function () { return {}; });
     attesa.remove();
 
     if (r.status === 401) {
@@ -303,15 +406,15 @@ async function invia() {
     }
     if (!r.ok || !dati.risposta) {
       storia.pop();
-      aggiungiBattuta("sparring", dati.errore || "Qualcosa non ha funzionato: riprova.", "errore");
+      aggiungiBattuta("assistente", dati.errore || "Qualcosa non ha funzionato: riprova.", "errore");
       return;
     }
     storia.push({ role: "assistant", content: dati.risposta });
-    aggiungiBattuta("sparring", dati.risposta);
+    aggiungiBattuta("assistente", dati.risposta);
   } catch {
     attesa.remove();
     storia.pop();
-    aggiungiBattuta("sparring", "Connessione non riuscita: controlla la rete e riprova.", "errore");
+    aggiungiBattuta("assistente", "Connessione non riuscita: controlla la rete e riprova.", "errore");
   } finally {
     inAttesa = false;
     bottoneInvia.disabled = false;
@@ -320,7 +423,7 @@ async function invia() {
 }
 
 bottoneInvia.addEventListener("click", invia);
-campo.addEventListener("keydown", (e) => {
+campo.addEventListener("keydown", function (e) {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); invia(); }
 });
 function ridimensiona() {
@@ -329,10 +432,17 @@ function ridimensiona() {
 }
 campo.addEventListener("input", ridimensiona);
 
-document.getElementById("nuova-sessione").addEventListener("click", () => {
+document.getElementById("nuova-sessione").addEventListener("click", function () {
   storia = [];
   foglio.innerHTML = "";
-  aggiungiBattuta("sparring", assistente.benvenuto);
+  if (assistente.personaggi) {
+    idPersonaggio = null;
+    document.getElementById("titolo-assistente").textContent = assistente.titolo;
+    document.title = assistente.titolo + " — Il canto delle sirene";
+    mostraSelettore();
+  } else {
+    apriDialogo();
+  }
   campo.focus();
 });
 </script>
